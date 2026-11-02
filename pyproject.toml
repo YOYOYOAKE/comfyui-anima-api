@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "comfyui-anima-api"
+version = "1.0.0"
+description = "Agent-friendly Anima workflow API"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "YOAKE" }]
+requires-python = ">=3.12"
+keywords = ["anima", "comfyui", "text-to-image", "img2img", "upscaler", "lora", "fastapi"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics",
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "websockets",
+    "pydantic-settings",
+]
+
+[project.scripts]
+app = "comfyui_anima_api.__main__:main"
+
+[dependency-groups]
+dev = ["pytest", "respx", "ruff", "mypy"]
+
+[project.urls]
+Homepage = "https://github.com/YOYOYOAKE/comfyui-anima-api"
+Issues = "https://github.com/YOYOYOAKE/comfyui-anima-api/issues"
+Documentation = "https://github.com/YOYOYOAKE/comfyui-anima-api/README.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/comfyui_anima_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "TID"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/comfyui_anima_api/config.py" = ["TID251"]
+"src/comfyui_anima_api/schemas.py" = ["TID251"]
+"tests/test_schemas.py" = ["TID251"]
+"tests/test_downloader.py" = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pydantic".msg = "pydantic is only allowed in config.py and schemas.py (input boundaries); domain code uses dataclass"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true

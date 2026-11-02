@@ -1,0 +1,16 @@
+services:
+  comfyui-anima-api:
+    build: .
+    image: comfyui-anima-api:latest
+    container_name: comfyui-anima-api
+    ports:
+      - "8189:8189"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./logs:/app/logs
+      - ./data:/app/data
+      # LoRA 目录，建议与外部 ComfyUI 共享 models/loras（替换为实际路径）
+      - /path/to/comfyui/models:/app/models
+    restart: unless-stopped
