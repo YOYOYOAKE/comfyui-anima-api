@@ -46,6 +46,12 @@ class TestTaskStore:
         done = run(s.get_task("t1"))
         assert done is not None and done["images_done"] == 2
         assert [i["filename"] for i in run(s.images("t1"))] == ["a.png", "b.png"]
+        img1 = run(s.image("t1", 1))
+        assert img1 is not None and img1["filename"] == "a.png" and img1["subfolder"] == ""
+        img2 = run(s.image("t1", 2))
+        assert img2 is not None and img2["filename"] == "b.png"
+        assert run(s.image("t1", 3)) is None  # 未产出/越界同型：None
+        assert run(s.image("missing", 1)) is None
 
         assert [t["id"] for t in run(s.unfinished_tasks())] == ["t1"]
         run(s.update_task("t1", status="done", finished_at=2.0))

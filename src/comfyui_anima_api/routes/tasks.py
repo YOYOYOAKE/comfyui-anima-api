@@ -7,7 +7,7 @@ import zipfile
 from collections.abc import AsyncIterator
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Path, Request
 from fastapi.responses import Response, StreamingResponse
 
 from comfyui_anima_api.comfyui import fetch_image_bytes
@@ -25,7 +25,7 @@ async def task_snapshot(task_id: str) -> dict:
     任务快照：状态 queued → running → done | error | cancelled
 
     params 为请求参数回显（b64 图片字段替换为占位符）；images 为已产出图片清单
-    （index + filename，本体在 ComfyUI output/ 里，经 images.zip 取回）。
+    （index + filename + url，本体在 ComfyUI output/ 里，url 单张现取，整包走 images.zip）。
     """
     task = await get_store().get_task(task_id)
     if task is None:
@@ -39,7 +39,10 @@ async def task_snapshot(task_id: str) -> dict:
         "prompt_id": task["prompt_id"],
         "images_total": task["images_total"],
         "images_done": task["images_done"],
-        "images": [{"index": img["idx"], "filename": img["filename"]} for img in images],
+        "images": [
+            {"index": img["idx"], "filename": img["filename"], "url": f"/tasks/{task_id}/images/{img['idx']}"}
+            for img in images
+        ],
         "params": task["params"],
         "created_at": task["created_at"],
         "started_at": task["started_at"],
@@ -60,7 +63,8 @@ async def task_events(task_id: str, request: Request) -> Response:
 
     - status: `{"status": "queued | running"}`
     - progress: `{"image": 1, "images_total": 1, "step": 14, "steps": 30}`
-    - image_done: `{"image": 1, "images_total": 1, "filename": "001_00001_.png", "seconds": 41.2}`
+    - image_done: `{"image": 1, "images_total": 1, "filename": "001_00001_.png",
+      "url": "/tasks/<task_id>/images/1", "seconds": 41.2}`
     - lora_progress: `{"bytes": 47185920, "total": 2040109465, "percent": 2.3, "speed_bps": 5452595, "eta_s": 354.0}`
     - done: `{"status": "done", "images": 1, "total_seconds": 128.4}`（残批附 `"truncated": true`）
     - error: `{"status": "error", "http_status": 502, "message": "…"}`
@@ -74,6 +78,44 @@ async def task_events(task_id: str, request: Request) -> Response:
     except ValueError:
         after_seq = 0
     return await sse_response(task_id, after_seq)
+
+
+@router.get("/tasks/{task_id}/images/{idx}")
+async def task_image(task_id: str, idx: int = Path(ge=1)) -> Response:
+    """
+    单张取图：task_images 登记表里出现的图片随时可取，包括任务仍处 running
+    的中途（这是与 images.zip 终态门禁的关键差异）。字节经 ComfyUI /view
+    现取现回，本服务不落盘。
+
+    - 任务不存在 → 404
+    - 序号尚未产出或超出范围 → 404（detail 带当前进度，轮询方据此决定稍后重试）
+    - ComfyUI 拉取失败 → 502
+
+    配合 SSE image_done 事件的 url 字段即产即取。
+    """
+    task = await get_store().get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"unknown task {task_id}")
+    img = await get_store().image(task_id, idx)
+    if img is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"task {task_id} has no image {idx} yet "
+            f"(images_done={task['images_done']}/images_total={task['images_total']})",
+        )
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(COMFYUI_CONFIG.connect_timeout, read=COMFYUI_CONFIG.connect_timeout * 6)
+        ) as client:
+            blob = await fetch_image_bytes(client, img)
+    except httpx.HTTPError as e:
+        logger.warning("tasks/%s/images/%d: fetch %s failed: %r", task_id, idx, img["filename"], e)
+        raise HTTPException(status_code=502, detail=f"fetch image {img['filename']!r} from ComfyUI failed") from e
+    return Response(
+        content=blob,
+        media_type="image/png",
+        headers={"Content-Disposition": f'attachment; filename="{img["filename"]}"'},
+    )
 
 
 class _ZipSink(io.RawIOBase):

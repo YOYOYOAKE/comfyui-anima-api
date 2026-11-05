@@ -258,6 +258,17 @@ class _TaskStore:
 
         return [cast(_ImageRow, dict(r)) for r in await asyncio.to_thread(op)]
 
+    async def image(self, task_id: str, idx: int) -> _ImageRow | None:
+        def op() -> sqlite3.Row | None:
+            with self._lock:
+                return self._conn.execute(
+                    "SELECT idx, filename, subfolder, type, prompt_id FROM task_images WHERE task_id = ? AND idx = ?",
+                    (task_id, idx),
+                ).fetchone()
+
+        row = await asyncio.to_thread(op)
+        return None if row is None else cast(_ImageRow, dict(row))
+
 
 _STORE: _TaskStore | None = None
 _STORE_PATH: str | None = None

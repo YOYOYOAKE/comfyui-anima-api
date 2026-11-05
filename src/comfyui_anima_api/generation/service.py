@@ -139,6 +139,7 @@ async def _run_generate_one(
                 "image": idx,
                 "images_total": p.count,
                 "filename": image["filename"],
+                "url": f"/tasks/{handle.task_id}/images/{idx}",
                 "seconds": round(time.monotonic() - image_started, 1),
             },
         )

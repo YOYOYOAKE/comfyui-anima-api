@@ -116,7 +116,10 @@ curl -s -X POST http://127.0.0.1:8189/anima/generate \
 # 查看任务进度
 curl -N http://127.0.0.1:8189/tasks/a1b2c3d4e5f6/events
 
-# 获取生成的图片
+# 单张现取：image_done 事件带 url，产出即可下载，无需等整批完成
+curl -s -o 001.png http://127.0.0.1:8189/tasks/a1b2c3d4e5f6/images/1
+
+# 获取生成的图片（整包）
 curl -s -o out.zip http://127.0.0.1:8189/tasks/a1b2c3d4e5f6/images.zip
 ```
 

@@ -181,6 +181,7 @@ class TestGenerateFlow:
             assert task["status"] == "done"
             assert task["images_done"] == 1
             assert task["images"][0]["filename"] == "001_.png"
+            assert task["images"][0]["url"] == f"/tasks/{task_id}/images/1"
             assert task["prompt_id"] == "pid-1"
             z = flow.get(f"/tasks/{task_id}/images.zip")
         assert z.status_code == 200
@@ -211,6 +212,7 @@ class TestGenerateFlow:
         assert events[0][2]["status"] == "queued"
         assert events[1][2]["status"] == "running"
         assert events[2][2]["image"] == 1 and events[2][2]["images_total"] == 1
+        assert events[2][2]["url"] == f"/tasks/{task_id}/images/1"
         assert events[3][2]["status"] == "done" and events[3][2]["images"] == 1
         # 终态清理：完成后的重连回放只剩终态事件
         assert [e[1] for e in after_done] == ["done"]
@@ -374,6 +376,7 @@ class TestTasksRoutes:
         assert flow.get("/tasks/nope").status_code == 404
         assert flow.get("/tasks/nope/events").status_code == 404
         assert flow.get("/tasks/nope/images.zip").status_code == 404
+        assert flow.get("/tasks/nope/images/1").status_code == 404
         assert flow.post("/tasks/nope/cancel").status_code == 404
 
     def test_zip_rejected_until_task_terminal(self, flow: TestClient) -> None:
@@ -411,6 +414,54 @@ class TestTasksRoutes:
         assert z.status_code == 200
         names = zipfile.ZipFile(io.BytesIO(z.content)).namelist()
         assert names == ["_INCOMPLETE.txt"]
+
+    def test_single_image_midrun_available_with_zip_still_409(
+        self, flow: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # 单图端点无终态门禁:第 1 张落地即 200 可取;此刻 zip 仍 409、
+        # 未产出的 idx 404(detail 带进度提示)、idx=0 过不了参数校验
+        monkeypatch.setattr(COMFYUI_CONFIG, "poll_interval", 0.01)
+        prompt_calls = 0
+
+        def prompt_side(request: httpx.Request) -> httpx.Response:
+            nonlocal prompt_calls
+            prompt_calls += 1
+            return httpx.Response(200, json={"prompt_id": f"pid-m{prompt_calls}"})
+
+        def history_side(request: httpx.Request) -> httpx.Response:
+            pid = request.url.path.rsplit("/", 1)[-1]
+            return httpx.Response(200, json=history_entry(pid) if pid == "pid-m1" else {})
+
+        with respx.mock:
+            respx.post(f"{COMFY}/prompt").mock(side_effect=prompt_side)
+            respx.get(url__startswith=f"{COMFY}/history/").mock(side_effect=history_side)
+            view = respx.get(f"{COMFY}/view").mock(return_value=httpx.Response(200, content=b"\x89PNG-single"))
+            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}, "count": 2}).json()["task_id"]
+            # 等 count=2 批次的第 1 张落地;第 2 张 history 恒空,任务停在 running
+            snap: dict = {}
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                snap = flow.get(f"/tasks/{task_id}").json()
+                if snap["images_done"] == 1:
+                    break
+                time.sleep(0.05)
+            assert snap["images_done"] == 1 and snap["status"] == "running"
+            assert snap["images"][0]["url"] == f"/tasks/{task_id}/images/1"
+
+            ok = flow.get(f"/tasks/{task_id}/images/1")
+            assert ok.status_code == 200
+            assert ok.headers["content-type"] == "image/png"
+            assert ok.headers["content-disposition"] == 'attachment; filename="001_.png"'
+            assert ok.content == b"\x89PNG-single"
+            assert view.call_count == 1
+
+            # 对照:同一时刻 zip 仍被终态门禁拦下;未产出的 idx 404 带进度;idx=0 走全局校验处理器 400
+            assert flow.get(f"/tasks/{task_id}/images.zip").status_code == 409
+            not_ready = flow.get(f"/tasks/{task_id}/images/2")
+            assert not_ready.status_code == 404
+            assert "no image 2" in not_ready.json()["error"] and "images_done=1" in not_ready.json()["error"]
+            bad_idx = flow.get(f"/tasks/{task_id}/images/0")
+            assert bad_idx.status_code == 400 and "invalid request" in bad_idx.json()["error"]
 
 
 class TestParamsSanitized:
