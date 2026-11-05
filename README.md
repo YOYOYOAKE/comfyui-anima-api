@@ -98,7 +98,7 @@ docker compose up -d --build
 
 ```bash
 uv sync
-uv run app
+uv run --no-sync app
 ```
 
 ### 验证

@@ -21,5 +21,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
 
 EXPOSE 8189
 
-CMD ["uv", "run", "app"]
+CMD ["uv", "run", "--no-sync", "app"]
 
