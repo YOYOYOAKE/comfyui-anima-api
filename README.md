@@ -34,16 +34,11 @@ Agent 友好的、适用于 [Anima Base](https://huggingface.co/circlestone-labs
 
 | 文件 | 放入 ComfyUI 路径 |
 |---|---|
-| `anima-lllite-any-test-like-v2.safetensors` | `models/controlnet/Anima/` |
-| `anima-lllite-inpainting-v1.safetensors` | `models/controlnet/Anima/` |
-| `anima-lllite-depth-1.safetensors` | `models/controlnet/Anima/` |
-| `anima-lllite-lineart-1.safetensors` | `models/controlnet/Anima/` |
-
-前往 [toyxyz/Anima_ControlNet-LLLite](https://huggingface.co/toyxyz/Anima_ControlNet-LLLite) 下载以下文件并放入指定路径：
-
-| 文件 | 放入 ComfyUI 路径 |
-|---|---|
-| `anima_3dpose_6200.safetensors` | `models/controlnet/Anima/` |
+| `anima-lllite-any-test-like-v2.safetensors` | `models/controlnet` |
+| `anima-lllite-inpainting-v1.safetensors` | `models/controlnet` |
+| `anima-lllite-depth-1.safetensors` | `models/controlnet` |
+| `anima-lllite-lineart-1.safetensors` | `models/controlnet` |
+| `anima-lllite-pose-1.safetensors` | `models/controlnet` |
 
 ### 自定义节点
 

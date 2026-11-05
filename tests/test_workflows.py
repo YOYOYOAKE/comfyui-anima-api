@@ -133,7 +133,7 @@ class TestReference:
     def test_explicit_strength_overrides_default(self) -> None:
         wf = build_with_images(cn="c [temp]", reference={"image": "c", "mode": "pose", "strength": 0.9})
         ref_apply = wf["ref_img_apply"]["inputs"]
-        assert ref_apply["lllite_name"] == "anima_3dpose_6200.safetensors"
+        assert ref_apply["lllite_name"] == "anima-lllite-pose-1.safetensors"
         assert ref_apply["strength"] == 0.9
 
     def test_inpaint_with_own_mask(self) -> None:

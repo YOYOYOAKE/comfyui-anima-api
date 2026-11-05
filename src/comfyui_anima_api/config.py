@@ -145,7 +145,7 @@ class _ControlNetModels(Section):
     mix_model: str = Field("anima-lllite-any-test-like-v2.safetensors", pattern=_SAFETENSORS)
     inpaint_model: str = Field("anima-lllite-inpainting-v1.safetensors", pattern=_SAFETENSORS)
     depth_model: str = Field("anima-lllite-depth-1.safetensors", pattern=_SAFETENSORS)
-    pose_model: str = Field("anima_3dpose_6200.safetensors", pattern=_SAFETENSORS)
+    pose_model: str = Field("anima-lllite-pose-1.safetensors", pattern=_SAFETENSORS)
     lineart_model: str = Field("anima-lllite-lineart-1.safetensors", pattern=_SAFETENSORS)
 
 
