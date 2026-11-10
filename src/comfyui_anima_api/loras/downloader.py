@@ -236,9 +236,15 @@ async def download(
         await asyncio.to_thread(verify_lora_file, tmp_path, expected_sha)
         size = os.path.getsize(tmp_path)  # 必须在 replace 前取：之后 tmp_path 已不存在
         os.replace(tmp_path, os.path.join(download_dir, p.filename))
-        update_registry(p.filename, p.version_id, p.trigger)
+        update_registry(p.filename, p.version_id, p.trigger, type=p.type, note=p.note)
         logger.info("lora/download: saved %s (%d bytes, %.1fs)", p.filename, size, time.monotonic() - started)
-        return {"filename": p.filename, "version_id": p.version_id, "trigger": p.trigger}
+        return {
+            "filename": p.filename,
+            "version_id": p.version_id,
+            "trigger": p.trigger,
+            "type": p.type,
+            "note": p.note,
+        }
 
 
 async def _run_aria2(

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from comfyui_anima_api.comfyui import comfyui_progress
 from comfyui_anima_api.config import API_SERVICE_CONFIG, CIVITAI_CONFIG, COMFYUI_CONFIG
-from comfyui_anima_api.loras import aria2c_available
+from comfyui_anima_api.loras import aria2c_available, migrate
 from comfyui_anima_api.routes import ROUTERS
 from comfyui_anima_api.tasks import get_store, reconcile
 from comfyui_anima_api.utils import setup_logging
@@ -53,6 +53,11 @@ curl -sS -X POST http://127.0.0.1:8189/tasks/$TASK/cancel   # 幂等取消
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     # 建目录建表（懒初始化的主动触发；裸 TestClient 不进 lifespan 时首次访问也会自建）
     get_store()
+    try:
+        # loras.json 版本迁移，先于任何下载/枚举触达登记表；新增版本只改 migrate.run，调用方不变
+        migrate.run()
+    except Exception:
+        logger.exception("loras.json migration failed; continuing with existing registry state")
     await comfyui_progress.start()
     try:
         await reconcile()

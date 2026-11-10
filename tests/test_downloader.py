@@ -75,12 +75,19 @@ class TestHappyPath:
         monkeypatch.setattr(dl, "_run_aria2", fake_aria2_writing(blob))
         with respx.mock:
             mock_meta()
-            result = call(DownloadParams(**P))
-        assert result == {"filename": "x.safetensors", "version_id": 42, "trigger": "t"}
+            result = call(DownloadParams(**P, type="style", note="demo"))
+        assert result == {
+            "filename": "x.safetensors",
+            "version_id": 42,
+            "trigger": "t",
+            "type": "style",
+            "note": "demo",
+        }
         assert (tmp_path / "x.safetensors").read_bytes() == blob
         assert not (tmp_path / "x.safetensors.part").exists()  # 已改名，不残留分片
         registry = json.loads((tmp_path / "loras.json").read_text(encoding="utf-8"))
-        assert registry["x.safetensors"]["version_id"] == 42
+        assert registry["loras"][0]["civitai_version_id"] == 42
+        assert registry["loras"][0]["type"] == "style"
 
     def test_sha_checked_against_primary_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """

@@ -542,11 +542,17 @@ class TestLoraRoutes:
     def test_list_with_registered_lora(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         patch_loras_paths(monkeypatch, tmp_path)
         (tmp_path / "a.safetensors").write_bytes(b"x")
-        registry.update_registry("a.safetensors", 42, "trigger a")
+        registry.update_registry("a.safetensors", 42, "trigger a", type="character", note="测试登记")
         r = client.get("/lora/list")
         body = r.json()
         assert body["counts"] == 1
-        assert body["loras"][0] == {"filename": "a.safetensors", "version_id": 42, "trigger": "trigger a"}
+        assert body["loras"][0] == {
+            "filename": "a.safetensors",
+            "civitai_version_id": 42,
+            "trigger": "trigger a",
+            "type": "character",
+            "note": "测试登记",
+        }
 
     def test_download_rejects_path_traversal_without_network(self) -> None:
         r = client.post("/lora/download", json={"version_id": 1, "filename": "../evil.safetensors", "trigger": "t"})
