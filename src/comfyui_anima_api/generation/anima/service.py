@@ -1,7 +1,7 @@
 """
 POST /generation/anima 业务编排，任务化后分两层：
-validate_generate 同步校验（路由层即时 400，含底图/蒙版 b64 预检）；
-run_generate 后台逐张执行（count 循环、独立 seed），进度经 TaskHandle 上报——
+validate 同步校验（路由层即时 400，含底图/蒙版 b64 预检）；
+run 后台逐张执行（count 循环、独立 seed），进度经 TaskHandle 上报——
 progress（第 i 张 + 当前步数）与 image_done（落盘登记）。
 领域错误直接抛 HTTPException（状态码语义见 README），由任务框架统一转 error 终态。
 """
@@ -23,7 +23,7 @@ from comfyui_anima_api.comfyui import (
     validate_history_entry,
 )
 from comfyui_anima_api.config import COMFYUI_CONFIG, GENERATE_DEFAULTS, REFERENCE_STRENGTH_DEFAULTS
-from comfyui_anima_api.generation.anima.workflows import build_generate_workflow
+from comfyui_anima_api.generation.anima.workflows import build
 from comfyui_anima_api.schemas import GenerateParams
 from comfyui_anima_api.tasks import TaskHandle
 from comfyui_anima_api.utils import decode_b64_image
@@ -31,7 +31,7 @@ from comfyui_anima_api.utils import decode_b64_image
 logger = logging.getLogger(__name__)
 
 
-def validate_generate(p: GenerateParams) -> str:
+def validate(p: GenerateParams) -> str:
     positive = p.prompt.positive.strip()
 
     if p.prompt.positive.isspace():
@@ -85,7 +85,7 @@ def validate_generate(p: GenerateParams) -> str:
     return positive
 
 
-async def _run_generate_one(
+async def _run_one(
     handle: TaskHandle,
     p: GenerateParams,
     client: httpx.AsyncClient,
@@ -105,7 +105,7 @@ async def _run_generate_one(
 
     seed = p.seed if p.seed is not None else random.randrange(2**64)
     image_started = time.monotonic()
-    workflow = build_generate_workflow(
+    workflow = build(
         p,
         positive=positive,
         denoise=denoise,
@@ -145,7 +145,7 @@ async def _run_generate_one(
         )
 
 
-async def run_generate(handle: TaskHandle, p: GenerateParams) -> None:
+async def run(handle: TaskHandle, p: GenerateParams) -> None:
     positive = p.prompt.positive.strip()
 
     denoise = (
@@ -220,7 +220,7 @@ async def run_generate(handle: TaskHandle, p: GenerateParams) -> None:
 
             try:
                 for i in range(1, p.count + 1):
-                    await _run_generate_one(
+                    await _run_one(
                         handle,
                         p,
                         client,

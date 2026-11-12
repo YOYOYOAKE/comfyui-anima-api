@@ -3,7 +3,7 @@ from typing import Any
 from comfyui_anima_api.config import MODEL_CONFIG, UPSCALE_CONFIG
 
 
-def build_upscale_workflow(image_name: str, filename_prefix: str = "upscale") -> dict:
+def build(image_name: str, filename_prefix: str = "upscale") -> dict:
     workflow: dict[str, dict[str, Any]] = {}
     workflow["img"] = {"class_type": "LoadImage", "inputs": {"image": image_name}}
 

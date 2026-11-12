@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from comfyui_anima_api.generation.anima import validate_generate
+from comfyui_anima_api import generation
 from comfyui_anima_api.schemas import GenerateParams
 from comfyui_anima_api.tasks import create_task
 
@@ -23,6 +23,6 @@ async def generate(p: GenerateParams) -> JSONResponse:
     reference.mask 仅 inpaint 模式有效（缺省回退 base.mask）。timeout 为单张图执行
     秒数上限，超时任务转 error（http_status 504）。
     """
-    validate_generate(p)
+    generation.anima.validate(p)
     task_id = await create_task("generate", p, images_total=p.count)
     return JSONResponse({"task_id": task_id}, status_code=202)

@@ -68,13 +68,13 @@ def _resolve_runner(task_type: str) -> _Runner:
     的 service 依赖 tasks.TaskHandle，runner 注册又反过来依赖它们——顶层互导成环，运行时导入斩断。
     """
     if task_type == "generate":
-        from comfyui_anima_api.generation.anima import run_generate
+        from comfyui_anima_api.generation import anima
 
-        return run_generate
+        return anima.run
     if task_type == "upscale":
-        from comfyui_anima_api.generation.upscale import run_upscale
+        from comfyui_anima_api.generation import upscale
 
-        return run_upscale
+        return upscale.run
     if task_type == "lora_download":
         return _run_download
     raise ValueError(f"unknown task type {task_type!r}")

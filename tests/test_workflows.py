@@ -2,13 +2,13 @@
 
 from typing import Any
 
+from comfyui_anima_api import generation
 from comfyui_anima_api.config import GENERATE_DEFAULTS, REFERENCE_STRENGTH_DEFAULTS
-from comfyui_anima_api.generation.anima import build_generate_workflow
 from comfyui_anima_api.schemas import GenerateParams
 
 
 def _ref_strength(p: GenerateParams) -> float:
-    """与 generation.anima.service.run_generate 同款解析：显式 strength 优先，缺省按 mode 取默认。"""
+    """与 generation.anima.service.run 同款解析：显式 strength 优先，缺省按 mode 取默认。"""
     return (
         p.reference.strength
         if p.reference.strength is not None
@@ -20,7 +20,7 @@ def build(**overrides: Any) -> tuple[dict, GenerateParams]:
     """构造最小 t2i 请求并组装工作流；overrides 直接进请求 dict。返回 (工作流, 请求对象)。"""
     body = {"prompt": {"positive": "pos", "negative": "neg"}, **overrides}
     p = GenerateParams.model_validate(body)
-    wf = build_generate_workflow(
+    wf = generation.anima.build(
         p,
         positive="pos",
         denoise=1.0,
@@ -43,7 +43,7 @@ def build_with_images(
 ) -> dict:
     body = {"prompt": {"positive": "pos", "negative": "neg"}, **overrides}
     p = GenerateParams.model_validate(body)
-    return build_generate_workflow(
+    return generation.anima.build(
         p,
         positive="pos",
         denoise=0.6,

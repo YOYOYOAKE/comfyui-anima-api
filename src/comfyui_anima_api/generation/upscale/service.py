@@ -1,10 +1,3 @@
-"""
-POST /generation/upscale 业务编排，任务化后分两层：
-validate_upscale 同步校验（路由层即时 400，b64 预检）；
-run_upscale 后台执行（上传 -> 提交 -> 等待 -> 登记），进度经 TaskHandle 上报。
-与同级的 generation.anima 域完全独立，互不引用；领域错误直接抛 HTTPException。
-"""
-
 import logging
 import random
 import time
@@ -21,7 +14,7 @@ from comfyui_anima_api.comfyui import (
     validate_history_entry,
 )
 from comfyui_anima_api.config import COMFYUI_CONFIG
-from comfyui_anima_api.generation.upscale.workflows import build_upscale_workflow
+from comfyui_anima_api.generation.upscale.workflows import build
 from comfyui_anima_api.schemas import UpscaleParams
 from comfyui_anima_api.tasks import TaskHandle
 from comfyui_anima_api.utils import decode_b64_image
@@ -29,11 +22,11 @@ from comfyui_anima_api.utils import decode_b64_image
 logger = logging.getLogger(__name__)
 
 
-def validate_upscale(p: UpscaleParams) -> None:
+def validate(p: UpscaleParams) -> None:
     decode_b64_image(p.image, "image")
 
 
-async def run_upscale(handle: TaskHandle, p: UpscaleParams) -> None:
+async def run(handle: TaskHandle, p: UpscaleParams) -> None:
     started = time.monotonic()
     try:
         async with httpx.AsyncClient(
@@ -48,7 +41,7 @@ async def run_upscale(handle: TaskHandle, p: UpscaleParams) -> None:
             feed = await comfyui_progress.subscribe()
 
             try:
-                prompt_id = await submit(client, build_upscale_workflow(image, f"upscale/{handle.task_id}/001"))
+                prompt_id = await submit(client, build(image, f"upscale/{handle.task_id}/001"))
                 await handle.set_prompt_id(prompt_id)
                 logger.info("upscale[%s]: submitted prompt_id=%s", handle.task_id, prompt_id)
                 entry = await await_prompt(client, feed, prompt_id, p.timeout, cancel=handle.cancel_event)

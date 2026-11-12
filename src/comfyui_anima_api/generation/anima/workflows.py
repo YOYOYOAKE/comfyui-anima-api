@@ -9,7 +9,7 @@ from comfyui_anima_api.config import (
 from comfyui_anima_api.schemas import GenerateParams
 
 
-def build_generate_workflow(
+def build(
     p: GenerateParams,
     *,
     positive: str,
