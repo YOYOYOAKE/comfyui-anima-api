@@ -54,12 +54,12 @@ class _TaskHandleImpl:
 
 async def _run_download(handle: TaskHandle, p: DownloadParams) -> dict[str, Any]:
     """LoRA 下载 runner：aria2 进度原样转发为 lora_progress 事件。"""
-    from comfyui_anima_api.loras import download
+    from comfyui_anima_api import loras
 
     async def on_progress(progress: dict[str, Any]) -> None:
         await handle.emit("lora_progress", progress)
 
-    return await download(p, on_progress=on_progress, cancel=handle.cancel_event)
+    return await loras.download.run(p, on_progress=on_progress, cancel=handle.cancel_event)
 
 
 def _resolve_runner(task_type: str) -> _Runner:

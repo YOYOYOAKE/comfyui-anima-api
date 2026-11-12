@@ -154,7 +154,7 @@ class TestUnknownAndShapes:
     def test_bad_download_filename_rejected(self) -> None:
         # 与 loras.name 同一规矩：纯文件名 + .safetensors，路径穿越在校验层即拒
         with pytest.raises(ValidationError, match=r"plain '<name>\.safetensors'"):
-            DownloadParams.model_validate({"version_id": 1, "filename": "../evil.safetensors", "trigger": "t"})
+            DownloadParams.model_validate({"version_id": 1, "filename": "../evil.safetensors"})
 
     def test_non_object_body_rejected(self) -> None:
         with pytest.raises(ValidationError) as ei:
@@ -191,10 +191,11 @@ class TestUpscaleAndDownload:
         assert first_error(ei.value)[0] == "missing"
 
     def test_download_minimum(self) -> None:
-        p = DownloadParams.model_validate({"version_id": 1, "filename": "a.safetensors", "trigger": "t"})
-        assert p.version_id == 1 and p.trigger == "t"
+        p = DownloadParams.model_validate({"version_id": 1, "filename": "a.safetensors"})
+        assert p.version_id == 1 and p.filename == "a.safetensors"
 
-    def test_download_empty_trigger_rejected(self) -> None:
+    def test_download_rejects_removed_metadata_fields(self) -> None:
+        # 触发词/类型/备注不再由 API 记录，传入即未知字段
         with pytest.raises(ValidationError) as ei:
-            DownloadParams.model_validate({"version_id": 1, "filename": "a.safetensors", "trigger": ""})
-        assert first_error(ei.value)[0] == "string_too_short"
+            DownloadParams.model_validate({"version_id": 1, "filename": "a.safetensors", "trigger": "t"})
+        assert first_error(ei.value)[0] == "extra_forbidden"

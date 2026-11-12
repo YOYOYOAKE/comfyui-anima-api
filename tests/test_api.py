@@ -21,7 +21,6 @@ from fastapi.testclient import TestClient
 from comfyui_anima_api.app import app
 from comfyui_anima_api.comfyui import comfyui_progress
 from comfyui_anima_api.config import CIVITAI_CONFIG, COMFYUI_CONFIG
-from comfyui_anima_api.loras import registry
 from comfyui_anima_api.tasks import get_store, reconcile
 
 COMFY = "http://comfy-test:8188"
@@ -537,32 +536,27 @@ class TestLoraRoutes:
         patch_loras_paths(monkeypatch, tmp_path)
         r = client.get("/lora/list")
         assert r.status_code == 200
-        assert r.json() == {"counts": 0, "loras": []}
+        assert r.json() == []
 
-    def test_list_with_registered_lora(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_returns_safetensors_filenames(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         patch_loras_paths(monkeypatch, tmp_path)
         (tmp_path / "a.safetensors").write_bytes(b"x")
-        registry.update_registry("a.safetensors", 42, "trigger a", type="character", note="测试登记")
+        (tmp_path / "b.safetensors").write_bytes(b"x")
+        (tmp_path / "partial.safetensors.part").write_bytes(b"x")  # 下载中的分片不算
+        (tmp_path / "notes.txt").write_text("x", encoding="utf-8")  # 非 safetensors 不算
         r = client.get("/lora/list")
-        body = r.json()
-        assert body["counts"] == 1
-        assert body["loras"][0] == {
-            "filename": "a.safetensors",
-            "civitai_version_id": 42,
-            "trigger": "trigger a",
-            "type": "character",
-            "note": "测试登记",
-        }
+        assert r.status_code == 200
+        assert sorted(r.json()) == ["a.safetensors", "b.safetensors"]
 
     def test_download_rejects_path_traversal_without_network(self) -> None:
-        r = client.post("/lora/download", json={"version_id": 1, "filename": "../evil.safetensors", "trigger": "t"})
+        r = client.post("/lora/download", json={"version_id": 1, "filename": "../evil.safetensors"})
         assert r.status_code == 400
 
     def test_download_rejects_api_key_in_body(self) -> None:
         # 鉴权凭据只认服务端 CIVITAI_API_KEY，请求体传入即未知字段
         r = client.post(
             "/lora/download",
-            json={"version_id": 1, "filename": "a.safetensors", "trigger": "t", "api_key": "sk-from-caller"},
+            json={"version_id": 1, "filename": "a.safetensors", "api_key": "sk-from-caller"},
         )
         assert r.status_code == 400
         assert "api_key" in r.json()["error"]
@@ -572,9 +566,9 @@ class TestLoraRoutes:
         assert r.status_code == 400
 
     def test_download_503_when_aria2c_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        import comfyui_anima_api.routes.loras as loras_route
+        import comfyui_anima_api.loras.aria2c as aria2c
 
-        monkeypatch.setattr(loras_route, "aria2c_available", lambda: False)
-        r = client.post("/lora/download", json={"version_id": 1, "filename": "a.safetensors", "trigger": "t"})
+        monkeypatch.setattr(aria2c, "is_available", lambda: False)
+        r = client.post("/lora/download", json={"version_id": 1, "filename": "a.safetensors"})
         assert r.status_code == 503
         assert "not installed" in r.json()["error"]

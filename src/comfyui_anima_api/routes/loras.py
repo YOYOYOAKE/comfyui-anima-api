@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from comfyui_anima_api.loras import ARIA2C_MISSING, aria2c_available, list_loras
+from comfyui_anima_api import loras
 from comfyui_anima_api.schemas import DownloadParams
 from comfyui_anima_api.tasks import create_task
 
@@ -9,13 +9,13 @@ router = APIRouter()
 
 
 @router.get("/lora/list")
-async def lora_list() -> dict:
+async def lora_list() -> list[str]:
     """
-    列出已落盘的 LoRA（仅 *.safetensors）
+    列出 LoRA 目录下全部 *.safetensors 文件名
 
-    已下载但未经本 API 登记的 LoRA 拿不到触发词与 version_id（trigger 为空）。
+    按文件 mtime 从新到旧排序；不返回触发词、类型、备注等用法信息，这些由用户自行维护。
     """
-    return list_loras()
+    return loras.list_all()
 
 
 @router.post("/lora/download")
@@ -29,7 +29,7 @@ async def lora_download(p: DownloadParams) -> JSONResponse:
     （纯文件名 + .safetensors，同名覆盖）；鉴权凭据只认服务端环境变量
     CIVITAI_API_KEY，请求体传入即未知字段报错。服务端缺 aria2c 时本端点 503。
     """
-    if not aria2c_available():
-        raise HTTPException(status_code=503, detail=ARIA2C_MISSING)
+    if not loras.aria2c.is_available():
+        raise HTTPException(status_code=503, detail=loras.aria2c.MISSING_MESSAGE)
     task_id = await create_task("lora_download", p)
     return JSONResponse({"task_id": task_id}, status_code=202)

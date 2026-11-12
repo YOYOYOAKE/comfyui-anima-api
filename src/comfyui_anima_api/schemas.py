@@ -12,7 +12,6 @@ provided（显式提供的键集合，与值无关）由 model_fields_set 承载
 
 import re
 from enum import StrEnum
-from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -20,9 +19,6 @@ from comfyui_anima_api.config import GENERATE_DEFAULTS, SIZE_PRESETS, ControlNet
 
 # 落盘/引用文件名仅允许无路径分隔符的纯文件名（loras/download 与 loras.name 共用同一规矩）
 LORA_FILENAME_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9 _()\[\].-]*\.safetensors")
-
-LoraType = Literal["style", "character", "concept", "other"]
-LORA_TYPES = get_args(LoraType)
 
 
 class SizeMode(StrEnum):
@@ -165,13 +161,13 @@ class UpscaleParams(RequestModel):
 
 
 class DownloadParams(RequestModel):
-    """POST /lora/download 请求体。鉴权凭据只认服务端环境变量 CIVITAI_API_KEY。"""
+    """POST /lora/download 请求体。鉴权凭据只认服务端环境变量 CIVITAI_API_KEY。
+
+    触发词、类型、备注等用法信息不再由 API 记录，由用户自行维护。
+    """
 
     version_id: int = Field(description="Civitai 版本 ID")
     filename: str = Field(description="落盘文件名（<name>.safetensors，纯文件名）；同名覆盖")
-    trigger: str = Field(min_length=1, description="触发词；随 loras.json 登记，/lora/list 可查")
-    type: LoraType = Field(default="other", description="LoRA 类型：style/character/concept/other")
-    note: str = Field(default="", description="备注；随 loras.json 登记，/lora/list 可查")
 
     @field_validator("filename")
     @classmethod

@@ -61,7 +61,7 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 "src/comfyui_anima_api/config.py" = ["TID251"]
 "src/comfyui_anima_api/schemas.py" = ["TID251"]
 "tests/test_schemas.py" = ["TID251"]
-"tests/test_downloader.py" = ["TID251"]
+"tests/test_download.py" = ["TID251"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pydantic".msg = "pydantic is only allowed in config.py and schemas.py (input boundaries); domain code uses dataclass"
