@@ -109,7 +109,7 @@ class TestEnumValidation:
         assert first_error(ei.value)[0] == "enum"
 
     def test_upscale_group_removed_from_generate(self) -> None:
-        # 超分走 POST /upscale：generate 不认识 upscale 参数，整组出现即未知字段
+        # 超分走 POST /generation/upscale：generate 不认识 upscale 参数，整组出现即未知字段
         with pytest.raises(ValidationError) as ei:
             GenerateParams.model_validate({"upscale": {"enable": True}})
         typ, loc, _ = first_error(ei.value)
@@ -163,7 +163,7 @@ class TestUnknownAndShapes:
 
 
 class TestStrengthSemantics:
-    """strength 的缺省收敛移到了 generation.service（执行时解析，与 denoise 同款）；
+    """strength 的缺省收敛移到了 generation.anima.service（执行时解析，与 denoise 同款）；
     schema 层只保证：显式值域校验、None 保持 None、provided 记账不含收敛污染。"""
 
     def test_explicit_strength_kept(self) -> None:

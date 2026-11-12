@@ -1,5 +1,5 @@
 """
-POST /anima/generate 业务编排，任务化后分两层：
+POST /generation/anima 业务编排，任务化后分两层：
 validate_generate 同步校验（路由层即时 400，含底图/蒙版 b64 预检）；
 run_generate 后台逐张执行（count 循环、独立 seed），进度经 TaskHandle 上报——
 progress（第 i 张 + 当前步数）与 image_done（落盘登记）。
@@ -23,7 +23,7 @@ from comfyui_anima_api.comfyui import (
     validate_history_entry,
 )
 from comfyui_anima_api.config import COMFYUI_CONFIG, GENERATE_DEFAULTS, REFERENCE_STRENGTH_DEFAULTS
-from comfyui_anima_api.generation.workflows import build_generate_workflow
+from comfyui_anima_api.generation.anima.workflows import build_generate_workflow
 from comfyui_anima_api.schemas import GenerateParams
 from comfyui_anima_api.tasks import TaskHandle
 from comfyui_anima_api.utils import decode_b64_image

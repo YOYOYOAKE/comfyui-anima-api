@@ -1,8 +1,8 @@
 """
-POST /upscale 业务编排，任务化后分两层：
+POST /generation/upscale 业务编排，任务化后分两层：
 validate_upscale 同步校验（路由层即时 400，b64 预检）；
 run_upscale 后台执行（上传 -> 提交 -> 等待 -> 登记），进度经 TaskHandle 上报。
-与 generation 完全独立，互不引用；领域错误直接抛 HTTPException。
+与同级的 generation.anima 域完全独立，互不引用；领域错误直接抛 HTTPException。
 """
 
 import logging
@@ -21,9 +21,9 @@ from comfyui_anima_api.comfyui import (
     validate_history_entry,
 )
 from comfyui_anima_api.config import COMFYUI_CONFIG
+from comfyui_anima_api.generation.upscale.workflows import build_upscale_workflow
 from comfyui_anima_api.schemas import UpscaleParams
 from comfyui_anima_api.tasks import TaskHandle
-from comfyui_anima_api.upscale.workflows import build_upscale_workflow
 from comfyui_anima_api.utils import decode_b64_image
 
 logger = logging.getLogger(__name__)

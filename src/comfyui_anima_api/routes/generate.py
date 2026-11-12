@@ -1,14 +1,14 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from comfyui_anima_api.generation import validate_generate
+from comfyui_anima_api.generation.anima import validate_generate
 from comfyui_anima_api.schemas import GenerateParams
 from comfyui_anima_api.tasks import create_task
 
 router = APIRouter()
 
 
-@router.post("/anima/generate")
+@router.post("/generation/anima")
 async def generate(p: GenerateParams) -> JSONResponse:
     """
     新建图像生成任务（文生图 / 图生图 / 局部重绘 / LLLite ControlNet 参考）

@@ -64,15 +64,15 @@ async def _run_download(handle: TaskHandle, p: DownloadParams) -> dict[str, Any]
 
 def _resolve_runner(task_type: str) -> _Runner:
     """
-    域 runner 的运行时解析。刻意不在模块顶层导入各域：generation/upscale 的 service
-    依赖 tasks.TaskHandle，runner 注册又反过来依赖它们——顶层互导成环，运行时导入斩断。
+    域 runner 的运行时解析。刻意不在模块顶层导入各域：generation.anima / generation.upscale
+    的 service 依赖 tasks.TaskHandle，runner 注册又反过来依赖它们——顶层互导成环，运行时导入斩断。
     """
     if task_type == "generate":
-        from comfyui_anima_api.generation import run_generate
+        from comfyui_anima_api.generation.anima import run_generate
 
         return run_generate
     if task_type == "upscale":
-        from comfyui_anima_api.upscale import run_upscale
+        from comfyui_anima_api.generation.upscale import run_upscale
 
         return run_upscale
     if task_type == "lora_download":

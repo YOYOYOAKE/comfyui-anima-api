@@ -1,6 +1,6 @@
 """
 TaskHandle：任务 runner 与任务框架之间的接口（Protocol，运行态由 tasks.service 提供）。
-generation / upscale / loras 三个域只依赖本模块，不反向依赖 tasks.service，避免环引用。
+generation.anima / generation.upscale / loras 三个域只依赖本模块，不反向依赖 tasks.service，避免环引用。
 """
 
 import asyncio

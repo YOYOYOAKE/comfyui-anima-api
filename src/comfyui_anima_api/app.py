@@ -38,7 +38,7 @@ _API_DESCRIPTION = """Agent 友好的 Anima 工作流 API：文生图 / 图生�
 ### 快速开始
 
 ```bash
-TASK=$(curl -sS -X POST http://127.0.0.1:8189/anima/generate \
+TASK=$(curl -sS -X POST http://127.0.0.1:8189/generation/anima \
   -H 'Content-Type: application/json' \
   -d '{"prompt": {"positive": "masterpiece, best quality, 1girl, solo"}}' | cut -d'"' -f4)
 curl -N  http://127.0.0.1:8189/tasks/$TASK/events      # SSE 进度

@@ -7,7 +7,7 @@
 字段约束声明在 Field 上，语义说明随 description 进入 /docs 与 /openapi.json。
 provided（显式提供的键集合，与值无关）由 model_fields_set 承载——service 据此拒绝
 当前模式下无意义的字段（多传即错）。reference.strength 的"缺省按模式收敛"不在 schema
-做（会污染 provided 记账），由 generation.service 在执行时解析，与 base.denoise 同款。
+做（会污染 provided 记账），由 generation.anima.service 在执行时解析，与 base.denoise 同款。
 """
 
 import re
@@ -156,7 +156,7 @@ class GenerateParams(RequestModel):
 
 
 class UpscaleParams(RequestModel):
-    """POST /upscale 请求体：底图经 4x-AnimeSharp 放大 2x（纯图像链，无扩散重绘）。"""
+    """POST /generation/upscale 请求体：底图经 4x-AnimeSharp 放大 2x（纯图像链，无扩散重绘）。"""
 
     image: str = Field(description="待超分底图（PNG/JPG/WebP 的 base64 或 data: URL）")
     timeout: float = Field(

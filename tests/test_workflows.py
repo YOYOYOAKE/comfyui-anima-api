@@ -1,14 +1,14 @@
-"""generation/workflows.py 单测：生成图 builder 的全分支（各模式节点链）。"""
+"""generation/anima/workflows.py 单测：生成图 builder 的全分支（各模式节点链）。"""
 
 from typing import Any
 
 from comfyui_anima_api.config import GENERATE_DEFAULTS, REFERENCE_STRENGTH_DEFAULTS
-from comfyui_anima_api.generation import build_generate_workflow
+from comfyui_anima_api.generation.anima import build_generate_workflow
 from comfyui_anima_api.schemas import GenerateParams
 
 
 def _ref_strength(p: GenerateParams) -> float:
-    """与 generation.service.run_generate 同款解析：显式 strength 优先，缺省按 mode 取默认。"""
+    """与 generation.anima.service.run_generate 同款解析：显式 strength 优先，缺省按 mode 取默认。"""
     return (
         p.reference.strength
         if p.reference.strength is not None
@@ -69,7 +69,7 @@ class TestTxt2Img:
         assert ks["positive"] == ["anima_pos", 0] and ks["negative"] == ["anima_neg", 0]
         assert wf["anima_pos"]["inputs"]["text"] == "pos" and wf["anima_neg"]["inputs"]["text"] == "neg"
         assert wf["anima_booster"]["inputs"]["sage_attention"] == "auto"
-        # 无 LoRA/CN/底图动态节点（us_model 属 upscale 域，防串扰）
+        # 无 LoRA/CN/底图动态节点（us_model 属 generation.upscale 域，防串扰）
         for absent in ("lora_0", "base_img", "ref_img", "ref_img_apply", "us_model"):
             assert absent not in wf
 

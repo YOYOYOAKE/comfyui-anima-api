@@ -108,7 +108,7 @@ curl http://127.0.0.1:8189/health
 # {"status":"ok","comfyui":"ok"}
 
 # 提交生成任务（count=3 批量三张，每张独立随机种子），拿 task_id
-curl -s -X POST http://127.0.0.1:8189/anima/generate \
+curl -s -X POST http://127.0.0.1:8189/generation/anima \
   -H "Content-Type: application/json" \
   -d '{"prompt": {"positive": "masterpiece, best quality, 1girl, solo, long silver hair, miko, shrine, sunset"}, "count": 3}'
 # {"task_id":"a1b2c3d4e5f6"}

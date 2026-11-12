@@ -1,5 +1,5 @@
 """
-图片数据解码与格式嗅探：generate / upscale 两个域共用的内容级校验。
+图片数据解码与格式嗅探：generation.anima / generation.upscale 两个域共用的内容级校验。
 按 magic bytes 识别 PNG/JPG/WebP：decode 预检即拒绝其它内容；upload 按嗅探结果定扩展名与 MIME。
 """
 

@@ -1,6 +1,6 @@
-"""upscale/workflows.py 单测：超分图 builder（sharp 链，纯图像处理无扩散节点）。"""
+"""generation/upscale/workflows.py 单测：超分图 builder（sharp 链，纯图像处理无扩散节点）。"""
 
-from comfyui_anima_api.upscale import build_upscale_workflow
+from comfyui_anima_api.generation.upscale import build_upscale_workflow
 
 
 class TestUpscaleWorkflow:

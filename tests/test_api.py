@@ -108,35 +108,35 @@ class TestGenerateValidation:
     """同步校验：任务创建前即 400，无需 mock 网络。"""
 
     def test_empty_positive_is_400(self) -> None:
-        r = client.post("/anima/generate", json={"prompt": {"positive": ""}})
+        r = client.post("/generation/anima", json={"prompt": {"positive": ""}})
         assert r.status_code == 400
         assert "error" in r.json()
 
     def test_whitespace_positive_is_400(self) -> None:
         # 空白串不算空 prompt：点名拒绝，区别于"没填"
-        r = client.post("/anima/generate", json={"prompt": {"positive": "   "}})
+        r = client.post("/generation/anima", json={"prompt": {"positive": "   "}})
         assert r.status_code == 400
         assert "whitespace" in r.json()["error"]
 
     def test_generate_rejects_upscale_group(self) -> None:
-        # 超分走 POST /upscale：generate 不认识 upscale 参数
-        r = client.post("/anima/generate", json={"prompt": {"positive": "x"}, "upscale": {"enable": True}})
+        # 超分走 POST /generation/upscale：generate 不认识 upscale 参数
+        r = client.post("/generation/anima", json={"prompt": {"positive": "x"}, "upscale": {"enable": True}})
         assert r.status_code == 400
         assert "upscale" in r.json()["error"]
 
     def test_invalid_base64_is_400_immediately(self) -> None:
         # b64 预检在路由层：坏图与坏参数一样即时拒绝，不进任务
-        r = client.post("/anima/generate", json={"prompt": {"positive": "x"}, "base": {"image": "!!!not-b64"}})
+        r = client.post("/generation/anima", json={"prompt": {"positive": "x"}, "base": {"image": "!!!not-b64"}})
         assert r.status_code == 400
         assert "base.image" in r.json()["error"]
 
     def test_invalid_count_is_400(self) -> None:
-        r = client.post("/anima/generate", json={"prompt": {"positive": "x"}, "count": 0})
+        r = client.post("/generation/anima", json={"prompt": {"positive": "x"}, "count": 0})
         assert r.status_code == 400
 
     def test_batch_with_explicit_seed_is_400(self, flow: TestClient) -> None:
         # 批量不支持指定种子：count>1 且显式 seed 直接拒，全用随机
-        r = flow.post("/anima/generate", json={"prompt": {"positive": "x"}, "seed": 7, "count": 3})
+        r = flow.post("/generation/anima", json={"prompt": {"positive": "x"}, "seed": 7, "count": 3})
         assert r.status_code == 400
         assert "seed" in r.json()["error"]
         assert "count>1" in r.json()["error"]
@@ -144,24 +144,24 @@ class TestGenerateValidation:
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-null"}))
             respx.get(f"{COMFY}/history/pid-null").mock(return_value=httpx.Response(200, json={}))
-            r2 = flow.post("/anima/generate", json={"prompt": {"positive": "x"}, "seed": None, "count": 3})
+            r2 = flow.post("/generation/anima", json={"prompt": {"positive": "x"}, "seed": None, "count": 3})
         assert r2.status_code == 202
 
     def test_reference_fields_without_image_is_400(self) -> None:
-        r = client.post("/anima/generate", json={"prompt": {"positive": "x"}, "reference": {"mode": "depth"}})
+        r = client.post("/generation/anima", json={"prompt": {"positive": "x"}, "reference": {"mode": "depth"}})
         assert r.status_code == 400
         assert "reference.mode" in r.json()["error"]
 
     def test_reference_mask_with_non_inpaint_is_400(self) -> None:
         r = client.post(
-            "/anima/generate",
+            "/generation/anima",
             json={"prompt": {"positive": "x"}, "reference": {"image": PNG_B64, "mode": "mix", "mask": PNG_B64}},
         )
         assert r.status_code == 400
         assert "reference.mask" in r.json()["error"]
 
     def test_invalid_enum_is_400(self) -> None:
-        r = client.post("/anima/generate", json={"prompt": {"positive": "x"}, "size": "huge"})
+        r = client.post("/generation/anima", json={"prompt": {"positive": "x"}, "size": "huge"})
         assert r.status_code == 400
 
 
@@ -174,7 +174,7 @@ class TestGenerateFlow:
     def test_happy_path_202_then_done_then_zip(self, flow: TestClient) -> None:
         with respx.mock:
             self._mock_comfyui("pid-1")
-            r = flow.post("/anima/generate", json={"prompt": {"positive": "test"}, "seed": 1})
+            r = flow.post("/generation/anima", json={"prompt": {"positive": "test"}, "seed": 1})
             assert r.status_code == 202
             task_id = r.json()["task_id"]
             task = wait_status(flow, task_id, "done", "error")
@@ -204,7 +204,7 @@ class TestGenerateFlow:
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-2"}))
             respx.get(f"{COMFY}/history/pid-2").mock(side_effect=gated_history)
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             time.sleep(0.05)  # 让 running 先进回放
             events = stream_events(flow, task_id)
             after_done = stream_events(flow, task_id)
@@ -222,7 +222,7 @@ class TestGenerateFlow:
         # 事件时回放为空且任务已终态，流必须立即收尾（而非挂着发心跳）
         with respx.mock:
             self._mock_comfyui("pid-3")
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             wait_status(flow, task_id, "done")
             full = stream_events(flow, task_id)
         assert [e[1] for e in full] == ["done"]
@@ -232,7 +232,7 @@ class TestGenerateFlow:
     def test_count_submits_per_image_with_random_seeds(self, flow: TestClient) -> None:
         with respx.mock:
             prompt_route = self._mock_comfyui("pid-4")
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}, "count": 3}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}, "count": 3}).json()["task_id"]
             task = wait_status(flow, task_id, "done", "error")
         assert task["status"] == "done" and task["images_done"] == 3
         assert prompt_route.call_count == 3
@@ -247,7 +247,7 @@ class TestGenerateFlow:
     def test_single_image_seed_passthrough(self, flow: TestClient) -> None:
         with respx.mock:
             prompt_route = self._mock_comfyui("pid-12")
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}, "seed": 7}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}, "seed": 7}).json()["task_id"]
             wait_status(flow, task_id, "done", "error")
         bodies = [json.loads(c.request.content) for c in prompt_route.calls]
         assert [b["prompt"]["anima_sampler"]["inputs"]["seed"] for b in bodies] == [7]
@@ -255,7 +255,7 @@ class TestGenerateFlow:
     def test_workflow_rejected_becomes_error_task(self, flow: TestClient) -> None:
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"node_errors": {"7": "bad"}}))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             task = wait_status(flow, task_id, "error")
             events = stream_events(flow, task_id)
         assert "workflow rejected" in task["error"]
@@ -267,7 +267,7 @@ class TestGenerateFlow:
     def test_comfyui_unreachable_becomes_502_error(self, flow: TestClient) -> None:
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(side_effect=httpx.ConnectError("boom"))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             task = wait_status(flow, task_id, "error")
             events = stream_events(flow, task_id)
         assert events[-1][2]["http_status"] == 502
@@ -277,7 +277,7 @@ class TestGenerateFlow:
         # ComfyUI 返回反代错误页等非 JSON 体 -> 502，而非裸 500
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(502, text="<html>bad gateway</html>"))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             task = wait_status(flow, task_id, "error")
         assert "non-JSON" in task["error"]
 
@@ -297,7 +297,7 @@ class TestUpscaleFlow:
     def test_happy_path(self, flow: TestClient) -> None:
         with respx.mock:
             self._mock_comfyui("pid-5", b"\x89PNG-up")
-            r = flow.post("/upscale", json={"image": PNG_B64})
+            r = flow.post("/generation/upscale", json={"image": PNG_B64})
             assert r.status_code == 202
             task_id = r.json()["task_id"]
             task = wait_status(flow, task_id, "done", "error")
@@ -306,12 +306,12 @@ class TestUpscaleFlow:
         assert z.content[:2] == b"PK"
 
     def test_image_required(self) -> None:
-        r = client.post("/upscale", json={})
+        r = client.post("/generation/upscale", json={})
         assert r.status_code == 400
         assert "image" in r.json()["error"]
 
     def test_unknown_field_rejected(self) -> None:
-        r = client.post("/upscale", json={"image": PNG_B64, "enable": True})
+        r = client.post("/generation/upscale", json={"image": PNG_B64, "enable": True})
         assert r.status_code == 400
         assert "enable" in r.json()["error"]
 
@@ -319,7 +319,7 @@ class TestUpscaleFlow:
         # null 一律等价未设置
         with respx.mock:
             self._mock_comfyui("pid-6", b"\x89PNG-up2")
-            r = flow.post("/upscale", json={"image": PNG_B64, "timeout": None})
+            r = flow.post("/generation/upscale", json={"image": PNG_B64, "timeout": None})
         assert r.status_code == 202
 
 
@@ -332,7 +332,7 @@ class TestCancel:
             respx.get(f"{COMFY}/queue").mock(
                 return_value=httpx.Response(200, json={"queue_running": [], "queue_pending": []})
             )
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             wait_status(flow, task_id, "running")
             r = flow.post(f"/tasks/{task_id}/cancel")
             assert r.status_code == 200
@@ -346,7 +346,7 @@ class TestCancel:
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-10"}))
             respx.get(f"{COMFY}/history/pid-10").mock(return_value=httpx.Response(200, json=history_entry("pid-10")))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             wait_status(flow, task_id, "done")
             r = flow.post(f"/tasks/{task_id}/cancel")
         assert r.json() == {"task_id": task_id, "status": "done"}
@@ -384,7 +384,7 @@ class TestTasksRoutes:
         with respx.mock:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-11"}))
             respx.get(f"{COMFY}/history/pid-11").mock(return_value=httpx.Response(200, json={}))  # 任务停在轮询
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             r = flow.get(f"/tasks/{task_id}/images.zip")
         assert r.status_code == 409
         assert "terminal state" in r.json()["error"]
@@ -396,7 +396,7 @@ class TestTasksRoutes:
             entry = history_entry("pid-e")["pid-e"]
             entry["status"] = {"status_str": "error", "completed": False, "messages": []}
             respx.get(f"{COMFY}/history/pid-e").mock(return_value=httpx.Response(200, json={"pid-e": entry}))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             wait_status(flow, task_id, "error")
             r = flow.get(f"/tasks/{task_id}/images.zip")
         assert r.status_code == 404
@@ -408,7 +408,7 @@ class TestTasksRoutes:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-z"}))
             respx.get(f"{COMFY}/history/pid-z").mock(return_value=httpx.Response(200, json=history_entry("pid-z")))
             respx.get(f"{COMFY}/view").mock(side_effect=httpx.ConnectError("boom"))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}}).json()["task_id"]
             wait_status(flow, task_id, "done", "error")
             z = flow.get(f"/tasks/{task_id}/images.zip")
         assert z.status_code == 200
@@ -436,7 +436,7 @@ class TestTasksRoutes:
             respx.post(f"{COMFY}/prompt").mock(side_effect=prompt_side)
             respx.get(url__startswith=f"{COMFY}/history/").mock(side_effect=history_side)
             view = respx.get(f"{COMFY}/view").mock(return_value=httpx.Response(200, content=b"\x89PNG-single"))
-            task_id = flow.post("/anima/generate", json={"prompt": {"positive": "x"}, "count": 2}).json()["task_id"]
+            task_id = flow.post("/generation/anima", json={"prompt": {"positive": "x"}, "count": 2}).json()["task_id"]
             # 等 count=2 批次的第 1 张落地;第 2 张 history 恒空,任务停在 running
             snap: dict = {}
             deadline = time.monotonic() + 10
@@ -472,7 +472,7 @@ class TestParamsSanitized:
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-s1"}))
             respx.get(f"{COMFY}/history/pid-s1").mock(return_value=httpx.Response(200, json={}))
             task_id = flow.post(
-                "/anima/generate",
+                "/generation/anima",
                 json={"prompt": {"positive": "x"}, "base": {"image": PNG_B64, "mask": PNG_B64}},
             ).json()["task_id"]
         params = flow.get(f"/tasks/{task_id}").json()["params"]
@@ -485,7 +485,7 @@ class TestParamsSanitized:
             respx.post(f"{COMFY}/upload/image").mock(return_value=httpx.Response(200, json={"name": "u.png"}))
             respx.post(f"{COMFY}/prompt").mock(return_value=httpx.Response(200, json={"prompt_id": "pid-s2"}))
             respx.get(f"{COMFY}/history/pid-s2").mock(return_value=httpx.Response(200, json={}))
-            task_id = flow.post("/upscale", json={"image": PNG_B64}).json()["task_id"]
+            task_id = flow.post("/generation/upscale", json={"image": PNG_B64}).json()["task_id"]
         params = flow.get(f"/tasks/{task_id}").json()["params"]
         assert params["image"] == "<base64 omitted: 12 chars>"
 
